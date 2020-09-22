@@ -1,11 +1,14 @@
 var database ,dog,dog1,dog2
-var position
+var foodS
 //var form
 var feed,add
 var foodobject
 var fedtime
 var lastFed
 var foodS, FoodStock;
+var bedImg, gardenImg, washImg, lazyImg;
+var currentTime;
+var gameStateRef;
 //Create variables here
 
 function preload()
@@ -13,20 +16,21 @@ function preload()
 {
   dogimg1 = loadImage("images/dogImg.png")
   dogimg2 = loadImage("images/dogImg1.png")
-	//load images here
+  //load images here
+
 }
 
 function setup() {
 	createCanvas(900, 500);
   database = firebase.database();
   console.log(database);
- 
+
+  gameStateRef  = database.ref('gameState');
   foodobject=new Food()
   dog = createSprite(550,250,10,10);
-  dog.addImage(dogimg1)
-  dog.scale=0.2
+  //dog.addImage(dogimg1)
+ // dog.scale=0.2
   
- 
 
   var FoodStock = database.ref('Food');
   FoodStock.on("value", readPosition, showError);
@@ -45,11 +49,12 @@ function setup() {
 function draw(){
   background(46,139,87);
  foodobject.display()
- 
+
   fedTime = database.ref('FeedTime');
   fedTime.on("value", function(data){
     lastFed=data.val();
   });
+  
   fill(255,255,254);
   textSize(15);
   if(lastFed>=12){
@@ -60,15 +65,39 @@ function draw(){
   }else{
     text("last Feed : "+lastFed+"AM", 250,30);
   }
-  
- 
+  currentTime=hour();
+  if(currentTime==(lastFed+1)){
+    
+    update("playing");
+    foodobject.garden();
+  }else if(currentTime==(lastFed+2)){
+    update("sleeping");
+    foodobject.bedroom();
+  }else if(currentTime==(lastFed+2) && currentTime<=(lastFed+4)){
+    update("bathing");
+    foodobject.washroom();
+  }else if(currentTime>4){
+    update("hungry");
+   foodobject.display();
+  }
+if(gameStateRef!="hungry"){
+  feed.hide();
+  add.hide();
+  dog.remove(); 
+}else{
+  feed.show();
+  add.show();
+  dog.addImage("dogImg1.png",  dogimg2 );
+
+}
   //add styles here
 drawSprites();
+
 }
 function readPosition(data){
-  position = data.val();
-  foodobject.updateFoodStock(position)
-  console.log(position.x);
+  foodS = data.val();
+  foodobject.updateFoodStock(foodS)
+  console.log(foodS.x);
   
 }
 
@@ -89,9 +118,9 @@ function writePosition(fir){
 
 }
 function AddFood(){
-position++
+foodS++
 database.ref('/').update({
-  Food:position
+  Food:foodS
 }
 
 )
@@ -104,4 +133,9 @@ foodobject.updateFoodStock(foodobject.getFoodStock()-1)
    Food:foodobject.getFoodStock(),
    FeedTime:hour()
  })
+}
+function update(state){
+  database.ref('/').update({
+    GameState: state
+  });
 }
